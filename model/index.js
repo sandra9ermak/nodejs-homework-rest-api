@@ -1,6 +1,7 @@
 const fs = require("fs").promises;
 const path = require("path");
 const uniqid = require("uniqid");
+const Joi = require("joi");
 
 const contactsPath = path.join(__dirname, "../db/contacts.json");
 
@@ -27,8 +28,6 @@ const addContact = async ({ name, email, phone }) => {
     email: Joi.string().required(),
     phone: Joi.required(),
   });
-  // const data = await fs.readFile(contactsPath, "utf-8");
-  // const contactList = JSON.parse(data);
   const contactList = await listContacts();
   const validationResult = schema.validate({ name, email, phone });
   if (validationResult.error) return false;
