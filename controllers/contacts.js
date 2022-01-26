@@ -21,8 +21,8 @@ const contactById = async (req, res, next) => {
 
 const add = async (req, res, next) => {
   try {
-    const result = await addContact(req.body);
-    return res.status(200).json(result);
+    await addContact(req.body);
+    return res.status(200).json({ message: "Contact added" });
   } catch (err) {
     return res.status(400).json({ message: "missing required name field" });
     // return res.status(400).json({ message: `${err.message}` });
@@ -31,7 +31,7 @@ const add = async (req, res, next) => {
 
 const remove = async (req, res, next) => {
   try {
-    const result = await removeContact(req.params.contactId);
+    await removeContact(req.params.contactId);
     res.status(200).json({ message: "Contact deleted" });
   } catch (err) {
     return res.status(404).json({ massage: "Contact not found" });
@@ -40,24 +40,22 @@ const remove = async (req, res, next) => {
 
 const update = async (req, res, next) => {
   try {
-    const contact = await updateContact(req.params.contactId, req.body);
-    res.status(200).json(contact);
+    res.status(200).json(await updateContact(req.params.contactId, req.body));
   } catch (err) {
     return res.status(404).json({ message: "Not found" });
   }
 };
 
-const updateStatusContact = async (req, res, next) => {
+const updateStatus = async (req, res, next) => {
   try {
-    await updateStatusContact(req.params.id, req.body);
     if (!req.body)
       return res.status(400).json({ message: "missing field favorite" });
     else
       return res
         .status(200)
-        .json(await updateStatusContact(req.params.id, req.body));
+        .json(await updateStatusContact(req.params.contactId, req.body));
   } catch (err) {
-    next(errors(404, err));
+    return res.status(404).json({ message: "Not found" });
   }
 };
 
@@ -67,5 +65,5 @@ module.exports = {
   remove,
   update,
   add,
-  updateStatusContact,
+  updateStatus,
 };
