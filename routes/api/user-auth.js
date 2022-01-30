@@ -2,8 +2,13 @@ const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const passport = require("passport");
+const gravatar = require("gravatar");
+const Jimp = require("jimp");
+const path = require("path");
+const { v4: uuidv4 } = require("uuid");
 require("dotenv").config();
-const User = require("../../model/user/user-schema");
+const fs = require("fs").promises;
+const multer = require("../../multer");
 const secret = process.env.SECRET;
 const {
   getUserByEmail,
@@ -46,6 +51,7 @@ router.post("/registration", async (req, res, next) => {
       data: {
         email: user.email,
         subscription: user.subscription,
+        avatarURL: gravatar.url(`${user.email}`),
       },
     });
   } catch (error) {
@@ -97,7 +103,28 @@ router.get("/current", auth, async (req, res, next) => {
   return res.json({
     email: req.user.email,
     subscription: req.user.subscription,
+    avatarURL: req.user.avatarURL,
   });
+});
+
+router.patch("/avatars", multer.single("picture"), async (req, res, next) => {
+  const { description } = req.body;
+  const { path: temporaryName, originalname } = req.file;
+  const newPathName = path.join(
+    process.cwd(),
+    `public/avatars/${uuidv4()}_${originalname}`
+  );
+
+  Jimp.read(temporaryName, async (err, storeImage) => {
+    if (err) throw err;
+    storeImage
+      .resize(250, 250) // resize
+      .quality(60) // set JPEG quality
+      .write(newPathName); // save
+    await fs.unlink(temporaryName);
+  });
+
+  res.json({ description, message: "Файл успешно загружен", status: 200 });
 });
 
 module.exports = router;

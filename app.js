@@ -1,8 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-require("dotenv").config();
 const app = express();
+require("dotenv").config();
 app.use(express.json());
 app.use(cors());
 require("./config/config-passport");
@@ -11,6 +11,7 @@ const routerApiContacts = require("./routes/api/contacts");
 const routerApiUser = require("./routes/api/user-auth");
 app.use("/api/contacts", routerApiContacts);
 app.use("/api/users", routerApiUser);
+app.use(express.static("public"));
 
 app.use((_, res, __) => {
   res.status(404).json({
