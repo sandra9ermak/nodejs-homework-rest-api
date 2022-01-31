@@ -9,11 +9,13 @@ const { v4: uuidv4 } = require("uuid");
 require("dotenv").config();
 const fs = require("fs").promises;
 const multer = require("../../multer");
+const transporter = require("../../mail");
 const secret = process.env.SECRET;
 const {
   getUserByEmail,
   addUser,
   updateToken,
+  verifyUpdateToken,
 } = require("../../model/user/user");
 
 const auth = (req, res, next) => {
@@ -35,6 +37,7 @@ const auth = (req, res, next) => {
 router.post("/registration", async (req, res, next) => {
   const { username, email, password } = req.body;
   const user = await getUserByEmail(email);
+  const verificationToken = uuidv4();
   if (user) {
     return res.status(409).json({
       status: "error",
@@ -44,7 +47,22 @@ router.post("/registration", async (req, res, next) => {
     });
   }
   try {
-    const user = await addUser({ email, password, username });
+    const user = await addUser({
+      email,
+      password,
+      username,
+      verificationToken,
+    });
+    transporter
+      .sendMail({
+        from: "sermak990@gmail.com",
+        to: user.email,
+        subject: "Verify email",
+        html: `<a href='http://localhost:3000/api/users/verify/${user.verificationToken}'>Press to verify</a>`,
+      })
+      .then((info) => console.log(info))
+      .catch((err) => console.log(err));
+
     res.status(201).json({
       status: "success",
       code: 201,
@@ -125,6 +143,49 @@ router.patch("/avatars", multer.single("picture"), async (req, res, next) => {
   });
 
   res.json({ description, message: "Файл успешно загружен", status: 200 });
+});
+
+router.get("/verify/:verificationToken", async (req, res, next) => {
+  try {
+    await verifyUpdateToken({ token: req.params.verificationToken });
+    return res.status(200).json({
+      status: "succsess",
+      code: 200,
+      message: "Verification successful",
+    });
+  } catch {
+    return res.status(404).json({ message: "User not found" });
+  }
+});
+
+router.post("/verify", async (req, res, next) => {
+  try {
+    let user = getUserByEmail(req.body.email);
+    if (user.verify) {
+      return res.status(200).json({
+        status: "400 Bad Request",
+        code: 400,
+        message: "Verification has already been passed",
+      });
+    }
+    if (!req.body.email) {
+      return res.status(400).json({
+        status: "error",
+        code: 400,
+        message: "missing required field email",
+      });
+    }
+    if (req.body.email && !user.verify) {
+      transporter.sendMail({
+        from: "sermak990@gmail.com",
+        to: user.email,
+        subject: "Verify email",
+        html: `<a href='http://localhost:3000/api/users/verify/${user.verificationToken}'>Press to verify</a>`,
+      });
+    }
+  } catch (error) {
+    return res.json({ message: `${error.message}` });
+  }
 });
 
 module.exports = router;
